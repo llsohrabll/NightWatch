@@ -1,5 +1,4 @@
 # NightWatch
---------------------
 ## Database
 1. Run database.sql
 2. Copy db_config.php to /var/www/config
