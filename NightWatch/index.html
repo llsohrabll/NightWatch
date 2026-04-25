@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Watch</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='75' font-size='80' text-anchor='middle' fill='%23b0c7e9' font-family='Arial, sans-serif'%3E❄%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Canvas‌های پس‌زمینه -->
+  <canvas id="star-canvas" class="bg-canvas"></canvas>
+
+  <div class="scale-container">
+    <div class="page-wrapper">
+      <main class="content-main">
+        <h1 class="site-title">Night Watch</h1>
+        <p class="site-subtitle">❄️The Wall Stands❄️</p>
+      </main>
+
+      <div class="decorations-layer" aria-hidden="true">
+        <div class="top-right-menu">
+          <button class="menu-btn login-btn" onclick="window.location.href='/login'">Login</button>
+        </div>
+      </div>
+
+      <footer class="footer-signature">
+        <span class="swords">⚔️</span>
+        <span class="glow-text">Night Watch Team</span>
+        <span class="swords">⚔️</span>
+      </footer>
+    </div>
+  </div>
+
+  <script src="animation.js"></script>
+</body>
+</html>
