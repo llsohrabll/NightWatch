@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <canvas id="frost-canvas" class="bg-canvas"></canvas>
+
+  <div class="panel-container">
+    
+    <aside class="sidebar glass-panel">
+      <div class="profile-section">
+        <div class="avatar-wrapper">
+          <div class="avatar-pulse"></div>
+          <div class="avatar">JS</div>
+        </div>
+        <h2 class="user-name">Loading...</h2>
+        <p class="user-rank">Lord Commander</p>
+      </div>
+
+      <nav class="side-nav">
+        <a href="#" class="nav-btn active"><span class="icon">&#128100;</span> Profile</a>
+      </nav>
+
+      <button class="logout-btn">Abandon Post</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar glass-panel">
+        <h1 class="panel-title glow-text">Command Center</h1>
+        <div class="status-indicator">
+          <span class="pulse-dot"></span> The Wall Stands
+        </div>
+      </header>
+
+      <section class="stats-grid">
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s;">
+          <div class="stat-title">All Registered Users</div>
+          <div class="stat-value" id="registered-users-value" data-target="0">0</div>
+          <div class="stat-bar"><div class="stat-fill" id="registered-users-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.2s;">
+          <div class="stat-title">Honor Level</div>
+          <div class="stat-value" id="honor-level-value" data-target="0">0</div>
+          <div class="stat-bar"><div class="stat-fill" id="honor-level-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.3s;">
+          <div class="stat-title">Server Uptime</div>
+          <div class="stat-value textual" id="server-uptime-value">Loading...</div>
+          <div class="stat-bar"><div class="stat-fill" id="server-uptime-fill" style="width: 0%;"></div></div>
+        </div>
+      </section>
+
+      <section class="activity-log glass-panel fade-in-up" style="animation-delay: 0.4s;">
+        <h3>Notifications</h3>
+        <ul class="log-list">
+          <li class="log-item">
+            <span class="log-time" id="token-expiry-label">CHECKING</span>
+            <span class="log-text" id="token-expiry-text">Loading token expiration status...</span>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="animation.js"></script>
+
+  <script>
+    let tokenExpiryTimer = null;
+    let serverUptimeTimer = null;
+    let expiryHandled = false;
+
+    function formatDuration(msLeft) {
+      const totalSeconds = Math.max(0, Math.ceil(msLeft / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+      }
+
+      if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      }
+
+      return `${seconds}s`;
+    }
+
+    function parseExpiry(value) {
+      if (!value) return null;
+
+      const normalized = String(value).includes('T')
+        ? String(value)
+        : String(value).replace(' ', 'T');
+      const parsed = Date.parse(normalized);
+
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function formatUptime(totalSeconds) {
+      if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+        return 'Unavailable';
+      }
+
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m`;
+      }
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+      }
+
+      if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      }
+
+      return `${seconds}s`;
+    }
+
+    function setFillWidth(elementId, percent) {
+      const fill = document.getElementById(elementId);
+      if (!fill) return;
+
+      fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+
+    function startServerUptimeCounter(initialSeconds) {
+      const uptimeValue = document.getElementById('server-uptime-value');
+      if (!uptimeValue) return;
+
+      if (serverUptimeTimer) {
+        window.clearInterval(serverUptimeTimer);
+      }
+
+      if (!Number.isFinite(initialSeconds) || initialSeconds < 0) {
+        uptimeValue.textContent = 'Unavailable';
+        setFillWidth('server-uptime-fill', 0);
+        serverUptimeTimer = null;
+        return;
+      }
+
+      let currentSeconds = Math.floor(initialSeconds);
+
+      function renderUptime() {
+        const dayProgress = ((currentSeconds % 86400) / 86400) * 100;
+        uptimeValue.textContent = formatUptime(currentSeconds);
+        setFillWidth('server-uptime-fill', dayProgress);
+      }
+
+      renderUptime();
+      serverUptimeTimer = window.setInterval(() => {
+        currentSeconds += 1;
+        renderUptime();
+      }, 1000);
+    }
+
+    function renderTokenNotification(expiresAt) {
+      const label = document.getElementById('token-expiry-label');
+      const text = document.getElementById('token-expiry-text');
+
+      if (!label || !text) return;
+
+      if (!Number.isFinite(expiresAt)) {
+        label.textContent = 'UNKNOWN';
+        text.textContent = 'Token expiration could not be determined.';
+        return;
+      }
+
+      const msLeft = expiresAt - Date.now();
+
+      if (msLeft <= 0) {
+        label.textContent = 'EXPIRED';
+        text.textContent = 'Your token has expired. Redirecting to login...';
+        return;
+      }
+
+      label.textContent = 'TOKEN';
+      text.textContent = `Expires in ${formatDuration(msLeft)}.`;
+    }
+
+    function startTokenCountdown(expiresAt) {
+      if (tokenExpiryTimer) {
+        window.clearInterval(tokenExpiryTimer);
+      }
+
+      expiryHandled = false;
+      renderTokenNotification(expiresAt);
+
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        tokenExpiryTimer = null;
+        if (!expiryHandled) {
+          expiryHandled = true;
+          window.setTimeout(() => {
+            clearAuth('/login');
+          }, 600);
+        }
+        return;
+      }
+
+      tokenExpiryTimer = window.setInterval(() => {
+        renderTokenNotification(expiresAt);
+
+        if (expiresAt <= Date.now()) {
+          window.clearInterval(tokenExpiryTimer);
+          tokenExpiryTimer = null;
+          if (!expiryHandled) {
+            expiryHandled = true;
+            window.setTimeout(() => {
+              clearAuth('/login');
+            }, 600);
+          }
+        }
+      }, 1000);
+    }
+
+    function renderStats(data) {
+      const registeredUsers = Number.isFinite(Number(data.registered_users))
+        ? Number(data.registered_users)
+        : 0;
+
+      const registeredUsersElem = document.getElementById('registered-users-value');
+      registeredUsersElem.setAttribute('data-target', String(registeredUsers));
+      registeredUsersElem.textContent = String(registeredUsers);
+      setFillWidth('registered-users-fill', registeredUsers > 0 ? 100 : 0);
+
+      const honorLevelElem = document.getElementById('honor-level-value');
+      honorLevelElem.setAttribute('data-target', '0');
+      honorLevelElem.textContent = '0';
+      setFillWidth('honor-level-fill', 0);
+
+      const uptimeSeconds = data.server_uptime_seconds === null || data.server_uptime_seconds === undefined
+        ? null
+        : Number(data.server_uptime_seconds);
+      startServerUptimeCounter(uptimeSeconds);
+    }
+
+    async function loadPanelData() {
+      const res = await authFetch('/functions/panel.php');
+      if (!res) return;
+
+      const data = await res.json();
+      if (!data || !data.username) {
+        await clearAuth('/login');
+        return;
+      }
+
+      document.querySelector('.user-name').textContent = data.username;
+      document.querySelector('.avatar').textContent = data.username.substring(0, 2).toUpperCase();
+
+      renderStats(data);
+
+      const expiresAt = Number(data.expires_at_ms) || parseExpiry(data.expires_at);
+      startTokenCountdown(expiresAt);
+    }
+
+    document.querySelector('.logout-btn').addEventListener('click', async () => {
+      await clearAuth('/login');
+    });
+
+    async function initPanel() {
+      const session = await requireAuth('/login');
+      if (!session) {
+        return;
+      }
+
+      await loadPanelData();
+    }
+
+    initPanel();
+  </script>
+
+</body>
+</html>
