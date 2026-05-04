@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <canvas id="frost-canvas" class="bg-canvas"></canvas>
+
+  <div class="panel-container">
+    
+    <aside class="sidebar glass-panel">
+      <div class="profile-section">
+        <div class="avatar-wrapper" id="avatar-wrapper">
+          <div class="avatar-pulse"></div>
+          <div class="avatar" id="profile-avatar">JS</div>
+          <button class="avatar-edit-btn" id="photo-edit-btn" title="Edit photo">
+            <span class="edit-icon">✎</span>
+          </button>
+        </div>
+        <h2 class="user-name">Loading...</h2>
+        <p class="user-rank">Lord Commander</p>
+      </div>
+
+      <nav class="side-nav">
+        <a href="#" class="nav-btn active" id="profile-nav-btn"><span class="icon">&#128100;</span> Profile</a>
+        <a href="#" class="nav-btn" id="public-nav-btn"><span class="icon">&#127757;</span> Public</a>
+      </nav>
+
+      <button class="logout-btn">Abandon Post</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar glass-panel">
+        <h1 class="panel-title glow-text">Command Center</h1>
+        <div class="status-indicator">
+          <span class="pulse-dot"></span> The Wall Stands
+        </div>
+      </header>
+
+      <section class="stats-grid">
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s;">
+          <div class="stat-title">All Registered Users</div>
+          <div class="stat-value" id="registered-users-value" data-target="0">0</div>
+          <div class="stat-bar"><div class="stat-fill" id="registered-users-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.2s;">
+          <div class="stat-title">Honor Level</div>
+          <div class="stat-value" id="honor-level-value" data-target="0">0</div>
+          <div class="stat-bar"><div class="stat-fill" id="honor-level-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.3s;">
+          <div class="stat-title">Server Uptime</div>
+          <div class="stat-value textual" id="server-uptime-value">Loading...</div>
+          <div class="stat-bar"><div class="stat-fill" id="server-uptime-fill" style="width: 0%;"></div></div>
+        </div>
+      </section>
+
+      <section class="activity-log glass-panel fade-in-up" style="animation-delay: 0.4s;">
+        <h3>Notifications</h3>
+        <ul class="log-list">
+          <li class="log-item">
+            <span class="log-time" id="token-expiry-label">CHECKING</span>
+            <span class="log-text" id="token-expiry-text">Loading token expiration status...</span>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+  </div>
+
+  <!-- Modal for choosing and uploading a profile photo -->
+  <div class="modal" id="photo-upload-modal">
+    <div class="modal-content photo-upload-modal">
+      <div class="modal-header">
+        <h3>Upload Profile Photo</h3>
+        <button class="modal-close" id="close-photo-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-info">
+          <p>Allowed formats: <strong>JPG, JPEG, PNG</strong></p>
+          <p>Maximum size: <strong>500KB</strong></p>
+        </div>
+        
+        <form id="photo-upload-form" class="photo-upload-form">
+          <div class="file-input-wrapper">
+            <input type="file" id="photo-input" name="photo" accept=".jpg,.jpeg,.png,image/jpeg" style="display: none;">
+            <label for="photo-input" class="file-input-label">
+              <span class="file-icon">📷</span>
+              <span class="file-text">Click to select photo or drag and drop</span>
+            </label>
+            <div class="file-preview-wrapper" id="file-preview-wrapper" style="display: none;">
+              <img id="file-preview" class="file-preview" alt="Preview">
+              <button type="button" class="remove-file-btn" id="remove-file-btn">Remove</button>
+            </div>
+          </div>
+
+          <div class="upload-error" id="upload-error" style="display: none;"></div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="cancel-upload">Cancel</button>
+            <button type="submit" class="btn-upload" id="submit-upload">Upload Photo</button>
+          </div>
+        </form>
+
+        <div class="upload-progress" id="upload-progress" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <p class="progress-text">Uploading... <span id="progress-percent">0</span>%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Extra file input kept in the DOM for upload-related UI handling -->
+  <input type="file" id="hidden-photo-input" name="photo" accept=".jpg,.jpeg,.png,image/jpeg" style="display: none;">
+
+  <!-- Modal that lists all registered users for the signed-in directory view -->
+  <div class="modal" id="users-directory-modal">
+    <div class="modal-content users-directory-modal">
+      <div class="modal-header">
+        <h3>Public Profiles</h3>
+        <button class="modal-close" id="close-users-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="users-grid" id="users-grid">
+          <div class="loading-spinner">Loading users...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal that shows one user's public profile details -->
+  <div class="modal" id="user-profile-modal">
+    <div class="modal-content user-profile-modal">
+      <div class="modal-header">
+        <h3 id="profile-modal-title">User Profile</h3>
+        <button class="modal-close" id="close-profile-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="user-profile-view">
+          <div class="profile-photo-section">
+            <div class="profile-photo" id="profile-photo">
+              <div class="profile-photo-placeholder">No Photo</div>
+            </div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-username" id="profile-username">Username</div>
+            <div class="profile-meta">
+              <span class="profile-id">ID: <span id="profile-user-id">-</span></span>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button class="btn-close-profile" id="close-profile-btn">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="animation.js"></script>
+
+  <script>
+    let tokenExpiryTimer = null;
+    let serverUptimeTimer = null;
+    let expiryHandled = false;
+
+    function formatDuration(msLeft) {
+      const totalSeconds = Math.max(0, Math.ceil(msLeft / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+      }
+
+      if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      }
+
+      return `${seconds}s`;
+    }
+
+    function parseExpiry(value) {
+      if (!value) return null;
+
+      const normalized = String(value).includes('T')
+        ? String(value)
+        : String(value).replace(' ', 'T');
+      const parsed = Date.parse(normalized);
+
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function formatUptime(totalSeconds) {
+      if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+        return 'Unavailable';
+      }
+
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m`;
+      }
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+      }
+
+      if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      }
+
+      return `${seconds}s`;
+    }
+
+    function setFillWidth(elementId, percent) {
+      const fill = document.getElementById(elementId);
+      if (!fill) return;
+
+      fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+
+    function startServerUptimeCounter(initialSeconds) {
+      const uptimeValue = document.getElementById('server-uptime-value');
+      if (!uptimeValue) return;
+
+      if (serverUptimeTimer) {
+        window.clearInterval(serverUptimeTimer);
+      }
+
+      if (!Number.isFinite(initialSeconds) || initialSeconds < 0) {
+        uptimeValue.textContent = 'Unavailable';
+        setFillWidth('server-uptime-fill', 0);
+        serverUptimeTimer = null;
+        return;
+      }
+
+      let currentSeconds = Math.floor(initialSeconds);
+
+      function renderUptime() {
+        const dayProgress = ((currentSeconds % 86400) / 86400) * 100;
+        uptimeValue.textContent = formatUptime(currentSeconds);
+        setFillWidth('server-uptime-fill', dayProgress);
+      }
+
+      renderUptime();
+      serverUptimeTimer = window.setInterval(() => {
+        currentSeconds += 1;
+        renderUptime();
+      }, 1000);
+    }
+
+    function renderTokenNotification(expiresAt) {
+      const label = document.getElementById('token-expiry-label');
+      const text = document.getElementById('token-expiry-text');
+
+      if (!label || !text) return;
+
+      if (!Number.isFinite(expiresAt)) {
+        label.textContent = 'UNKNOWN';
+        text.textContent = 'Token expiration could not be determined.';
+        return;
+      }
+
+      const msLeft = expiresAt - Date.now();
+
+      if (msLeft <= 0) {
+        label.textContent = 'EXPIRED';
+        text.textContent = 'Your token has expired. Redirecting to login...';
+        return;
+      }
+
+      label.textContent = 'TOKEN';
+      text.textContent = `Expires in ${formatDuration(msLeft)}.`;
+    }
+
+    function startTokenCountdown(expiresAt) {
+      if (tokenExpiryTimer) {
+        window.clearInterval(tokenExpiryTimer);
+      }
+
+      expiryHandled = false;
+      renderTokenNotification(expiresAt);
+
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        tokenExpiryTimer = null;
+        if (!expiryHandled) {
+          expiryHandled = true;
+          window.setTimeout(() => {
+            clearAuth('/login');
+          }, 600);
+        }
+        return;
+      }
+
+      tokenExpiryTimer = window.setInterval(() => {
+        renderTokenNotification(expiresAt);
+
+        if (expiresAt <= Date.now()) {
+          window.clearInterval(tokenExpiryTimer);
+          tokenExpiryTimer = null;
+          if (!expiryHandled) {
+            expiryHandled = true;
+            window.setTimeout(() => {
+              clearAuth('/login');
+            }, 600);
+          }
+        }
+      }, 1000);
+    }
+
+    function renderStats(data) {
+      const registeredUsers = Number.isFinite(Number(data.registered_users))
+        ? Number(data.registered_users)
+        : 0;
+
+      const registeredUsersElem = document.getElementById('registered-users-value');
+      registeredUsersElem.setAttribute('data-target', String(registeredUsers));
+      registeredUsersElem.textContent = String(registeredUsers);
+      setFillWidth('registered-users-fill', registeredUsers > 0 ? 100 : 0);
+
+      const honorLevelElem = document.getElementById('honor-level-value');
+      honorLevelElem.setAttribute('data-target', '0');
+      honorLevelElem.textContent = '0';
+      setFillWidth('honor-level-fill', 0);
+
+      const uptimeSeconds = data.server_uptime_seconds === null || data.server_uptime_seconds === undefined
+        ? null
+        : Number(data.server_uptime_seconds);
+      startServerUptimeCounter(uptimeSeconds);
+    }
+
+    async function loadPanelData() {
+      const res = await authFetch('/functions/panel.php');
+      if (!res) return;
+
+      const data = await res.json();
+      if (!data || !data.username) {
+        await clearAuth('/login');
+        return;
+      }
+
+      document.querySelector('.user-name').textContent = data.username;
+      document.querySelector('.avatar').textContent = data.username.substring(0, 2).toUpperCase();
+
+      // If the API already knows about a profile photo, show it immediately.
+      if (data.photo_path) {
+        initializeAvatar(data.photo_path);
+      }
+
+      renderStats(data);
+
+      const expiresAt = Number(data.expires_at_ms) || parseExpiry(data.expires_at);
+      startTokenCountdown(expiresAt);
+    }
+
+    document.querySelector('.logout-btn').addEventListener('click', async () => {
+      await clearAuth('/login');
+    });
+
+    async function initPanel() {
+      const session = await requireAuth('/login');
+      if (!session) {
+        return;
+      }
+
+      await loadPanelData();
+    }
+
+    // ======================== Photo Upload Feature ========================
+    
+    // Browser-side checks that match the backend upload rules.
+    const PHOTO_CONFIG = {
+      maxSize: 500 * 1024, // 500KB in bytes
+      allowedTypes: ['jpg', 'jpeg', 'png'],
+      allowedMimes: ['image/jpeg', 'image/jpg', 'image/png']
+    };
+
+    // Cache the elements used by the upload modal.
+    const photoModal = document.getElementById('photo-upload-modal');
+    const photoForm = document.getElementById('photo-upload-form');
+    const photoInput = document.getElementById('photo-input');
+    const fileInputLabel = document.querySelector('.file-input-label');
+    const filePreviewWrapper = document.getElementById('file-preview-wrapper');
+    const filePreview = document.getElementById('file-preview');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const uploadError = document.getElementById('upload-error');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const submitBtn = document.getElementById('submit-upload');
+    const photoEditBtn = document.getElementById('photo-edit-btn');
+    const closePhotoModal = document.getElementById('close-photo-modal');
+    const cancelUpload = document.getElementById('cancel-upload');
+
+    // Simple state flags for the upload UI.
+    let selectedFile = null;
+    let isUploading = false;
+
+    // Open the upload modal from the edit button on the avatar.
+    photoEditBtn.addEventListener('click', () => {
+      photoModal.classList.add('show');
+      resetUploadForm();
+    });
+
+    // Close helpers keep the UI reset in one place.
+    function closePhotoModal_fn() {
+      photoModal.classList.remove('show');
+      resetUploadForm();
+    }
+
+    closePhotoModal.addEventListener('click', closePhotoModal_fn);
+    cancelUpload.addEventListener('click', closePhotoModal_fn);
+
+    // Clicking the shaded backdrop closes the modal too.
+    photoModal.addEventListener('click', (e) => {
+      if (e.target === photoModal) {
+        closePhotoModal_fn();
+      }
+    });
+
+    // When the user picks a file, validate it before upload.
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        validateAndPreviewFile(file);
+      }
+    });
+
+    // Let the user clear the current file choice.
+    removeFileBtn.addEventListener('click', () => {
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+      uploadError.style.display = 'none';
+    });
+
+    // Drag-and-drop uses the same validation flow as normal file picking.
+    fileInputLabel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      fileInputLabel.classList.add('drag-over');
+    });
+
+    fileInputLabel.addEventListener('dragleave', () => {
+      fileInputLabel.classList.remove('drag-over');
+    });
+
+    fileInputLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileInputLabel.classList.remove('drag-over');
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        validateAndPreviewFile(file);
+        // Mirror the dropped file into the real input element.
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        photoInput.files = dataTransfer.files;
+      }
+    });
+
+    // Submit only when a valid file is selected.
+    photoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedFile || isUploading) {
+        return;
+      }
+
+      await uploadPhoto();
+    });
+
+    // Check the file and show a preview before uploading it.
+    function validateAndPreviewFile(file) {
+      // Clear the previous error state.
+      uploadError.style.display = 'none';
+      uploadError.textContent = '';
+
+      // Check the file extension first.
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (!PHOTO_CONFIG.allowedTypes.includes(fileExtension)) {
+        showError('Invalid file type. Only JPG / JPEG and PNG files are allowed.');
+        return;
+      }
+
+      // Block files larger than the server limit.
+      if (file.size > PHOTO_CONFIG.maxSize) {
+        showError('File size exceeds 500KB limit. Please choose a smaller file.');
+        return;
+      }
+
+      // Also check the MIME type reported by the browser.
+      if (!PHOTO_CONFIG.allowedMimes.includes(file.type)) {
+        showError('Invalid image type. Only JPG/JPEG/PNG images are allowed.');
+        return;
+      }
+
+      // Save the file in memory so the upload step can use it.
+      selectedFile = file;
+
+      // FileReader turns the local file into a preview URL.
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        filePreview.src = e.target?.result ?? '';
+        filePreviewWrapper.style.display = 'flex';
+        fileInputLabel.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Reset the picker and show the problem to the user.
+    function showError(message) {
+      uploadError.textContent = message;
+      uploadError.style.display = 'block';
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+    }
+
+    // Send the file to the backend with XMLHttpRequest so we can track progress.
+    async function uploadPhoto() {
+      if (!selectedFile) {
+        return;
+      }
+
+      isUploading = true;
+      submitBtn.disabled = true;
+      uploadProgress.style.display = 'flex';
+      uploadError.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('photo', selectedFile);
+
+      try {
+        const xhr = new XMLHttpRequest();
+
+        // Update the progress bar while bytes are being sent.
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressFill.style.width = percentComplete + '%';
+            progressPercent.textContent = Math.round(percentComplete);
+          }
+        });
+
+        // When the request finishes, read the JSON result.
+        xhr.addEventListener('load', () => {
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.success) {
+                // Update the avatar without a full page refresh.
+                updateAvatarWithPhoto(response.photo_path);
+                setTimeout(() => {
+                  closePhotoModal_fn();
+                  isUploading = false;
+                  submitBtn.disabled = false;
+                  uploadProgress.style.display = 'none';
+                }, 500);
+              } else {
+                showUploadError(response.error ?? 'Upload failed.');
+                completeUpload();
+              }
+            } catch (e) {
+              showUploadError('Invalid server response.');
+              completeUpload();
+            }
+          } else {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              showUploadError(response.error ?? 'Upload failed.');
+            } catch (e) {
+              showUploadError('Upload failed. Please try again.');
+            }
+            completeUpload();
+          }
+        });
+
+        // Show a friendly message if the request cannot reach the server.
+        xhr.addEventListener('error', () => {
+          showUploadError('Network error. Please try again.');
+          completeUpload();
+        });
+
+        // Abort can happen if the browser cancels the request.
+        xhr.addEventListener('abort', () => {
+          showUploadError('Upload cancelled.');
+          completeUpload();
+        });
+
+        // Start the upload request.
+        xhr.open('POST', '/functions/upload_photo.php');
+        xhr.send(formData);
+      } catch (error) {
+        showUploadError('An error occurred. Please try again.');
+        completeUpload();
+      }
+    }
+
+    // Shared helper for upload errors.
+    function showUploadError(message) {
+      uploadError.textContent = message;
+      uploadError.style.display = 'block';
+      uploadProgress.style.display = 'none';
+    }
+
+    // Put the upload UI back into its idle state.
+    function completeUpload() {
+      isUploading = false;
+      submitBtn.disabled = false;
+      uploadProgress.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0';
+    }
+
+    // Swap the initials for the new image.
+    function updateAvatarWithPhoto(photoPath) {
+      const avatar = document.getElementById('profile-avatar');
+      
+      // Use the uploaded file path as a CSS background image.
+      avatar.style.backgroundImage = `url('/${photoPath}')`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      avatar.classList.add('has-photo');
+      
+      // Once a photo exists, the initials are no longer needed.
+      avatar.textContent = '';
+    }
+
+    // Restore the upload modal to its empty default state.
+    function resetUploadForm() {
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+      uploadError.style.display = 'none';
+      uploadProgress.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0';
+      submitBtn.disabled = false;
+      isUploading = false;
+    }
+
+    // Use the saved photo path when the page first loads.
+    function initializeAvatar(photoPath) {
+      if (photoPath) {
+        const avatar = document.getElementById('profile-avatar');
+        avatar.style.backgroundImage = `url('/${photoPath}')`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+        avatar.classList.add('has-photo');
+        avatar.textContent = '';
+      }
+    }
+
+    // ======================== Public Users Directory Feature ========================
+
+    const profileNavBtn = document.getElementById('profile-nav-btn');
+    const publicNavBtn = document.getElementById('public-nav-btn');
+    const usersDirectoryModal = document.getElementById('users-directory-modal');
+    const userProfileModal = document.getElementById('user-profile-modal');
+    const usersGrid = document.getElementById('users-grid');
+    const closeUsersModal = document.getElementById('close-users-modal');
+    const closeProfileModal = document.getElementById('close-profile-modal');
+    const closeProfileBtn = document.getElementById('close-profile-btn');
+
+    let currentUsers = []; // Cache the directory list so reopening the modal is faster.
+
+    // The sidebar buttons switch between the local profile view and the public directory.
+    profileNavBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showProfileView();
+    });
+
+    publicNavBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showPublicView();
+    });
+
+    // Return to the main profile view.
+    function showProfileView() {
+      profileNavBtn.classList.add('active');
+      publicNavBtn.classList.remove('active');
+      usersDirectoryModal.classList.remove('show');
+      userProfileModal.classList.remove('show');
+    }
+
+    // Open the directory modal and load users if needed.
+    async function showPublicView() {
+      profileNavBtn.classList.remove('active');
+      publicNavBtn.classList.add('active');
+      userProfileModal.classList.remove('show');
+      usersDirectoryModal.classList.add('show');
+
+      // Reuse cached data when possible.
+      if (currentUsers.length === 0) {
+        await loadUsers();
+      } else {
+        renderUserCards(currentUsers);
+      }
+    }
+
+    // Ask the backend for the current directory list.
+    async function loadUsers() {
+      usersGrid.innerHTML = '<div class="loading-spinner">Loading users...</div>';
+
+      try {
+        const res = await authFetch('/functions/get_users.php');
+        if (!res) {
+          usersGrid.innerHTML = '<div style="grid-column: 1/-1; color: #ff9999; text-align: center; padding: 20px;">Failed to load users. Please try again.</div>';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success || !data.users) {
+          usersGrid.innerHTML = '<div style="grid-column: 1/-1; color: #ff9999; text-align: center; padding: 20px;">No users found.</div>';
+          return;
+        }
+
+        currentUsers = data.users;
+        renderUserCards(currentUsers);
+      } catch (error) {
+        usersGrid.innerHTML = '<div style="grid-column: 1/-1; color: #ff9999; text-align: center; padding: 20px;">Error loading users.</div>';
+      }
+    }
+
+    // Turn each user object into a clickable card.
+    function renderUserCards(users) {
+      if (users.length === 0) {
+        usersGrid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-muted); text-align: center; padding: 20px;">No users registered yet.</div>';
+        return;
+      }
+
+      usersGrid.innerHTML = '';
+
+      users.forEach(user => {
+        const userCard = document.createElement('div');
+        userCard.className = 'user-card';
+        userCard.style.cursor = 'pointer';
+
+        // Each card shows either a profile photo or initials.
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'user-card-avatar';
+
+        if (user.photo_path) {
+          avatarDiv.style.backgroundImage = `url('/${user.photo_path}')`;
+          avatarDiv.classList.add('has-photo');
+        } else {
+          // Initials are the fallback when no photo path exists.
+          avatarDiv.textContent = user.username.substring(0, 2).toUpperCase();
+        }
+
+        // The username is shown below the avatar.
+        const usernameDiv = document.createElement('div');
+        usernameDiv.className = 'user-card-username';
+        usernameDiv.textContent = user.username;
+
+        userCard.appendChild(avatarDiv);
+        userCard.appendChild(usernameDiv);
+
+        // Clicking a card opens the single-user profile modal.
+        userCard.addEventListener('click', () => {
+          showUserProfile(user);
+        });
+
+        usersGrid.appendChild(userCard);
+      });
+    }
+
+    // Fill the profile modal with the clicked user's data.
+    function showUserProfile(user) {
+      // Copy the selected user's basic data into the modal.
+      document.getElementById('profile-modal-title').textContent = user.username;
+      document.getElementById('profile-username').textContent = user.username;
+      document.getElementById('profile-user-id').textContent = user.id;
+
+      // Show a photo when one exists, otherwise show initials.
+      const profilePhotoDiv = document.getElementById('profile-photo');
+      const placeholder = profilePhotoDiv.querySelector('.profile-photo-placeholder');
+
+      if (user.photo_path) {
+        profilePhotoDiv.style.backgroundImage = `url('/${user.photo_path}')`;
+        profilePhotoDiv.classList.add('has-photo');
+        if (placeholder) placeholder.style.display = 'none';
+      } else {
+        profilePhotoDiv.style.backgroundImage = 'none';
+        profilePhotoDiv.classList.remove('has-photo');
+        if (placeholder) {
+          placeholder.style.display = 'block';
+          placeholder.textContent = user.username.substring(0, 2).toUpperCase();
+        }
+      }
+
+      // Hide the directory and show the profile detail modal.
+      usersDirectoryModal.classList.remove('show');
+      userProfileModal.classList.add('show');
+    }
+
+    // Close and back-navigation handlers for the directory/profile modals.
+    closeUsersModal.addEventListener('click', () => {
+      usersDirectoryModal.classList.remove('show');
+      showProfileView();
+    });
+
+    closeProfileModal.addEventListener('click', () => {
+      userProfileModal.classList.remove('show');
+      usersDirectoryModal.classList.add('show');
+    });
+
+    closeProfileBtn.addEventListener('click', () => {
+      userProfileModal.classList.remove('show');
+      usersDirectoryModal.classList.add('show');
+    });
+
+    // Clicking the backdrop closes the matching modal.
+    usersDirectoryModal.addEventListener('click', (e) => {
+      if (e.target === usersDirectoryModal) {
+        usersDirectoryModal.classList.remove('show');
+        showProfileView();
+      }
+    });
+
+    userProfileModal.addEventListener('click', (e) => {
+      if (e.target === userProfileModal) {
+        userProfileModal.classList.remove('show');
+        usersDirectoryModal.classList.add('show');
+      }
+    });
+
+    initPanel();
+  </script>
+
+</body>
+</html>

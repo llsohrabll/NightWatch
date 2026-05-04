@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Reset</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='75' font-size='80' text-anchor='middle' fill='%23b0c7e9' font-family='Arial, sans-serif'%3E❄%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="login-container">
+    <div class="login-box">
+
+      <h1 class="site-title glow-text">PASSWORD RESET</h1>
+      <p class="site-subtitle">RECOVER YOUR ACCOUNT</p>
+
+      <div id="message-box" style="min-height: 24px; margin-bottom: 10px; color: #ff6b6b; text-align: center;"></div>
+
+      <!-- STEP 1: Request Reset Code -->
+      <form class="login-form" id="request-form" style="display: block;">
+        <h3 style="color: #6bff9e; text-align: center; margin: 10px 0;">Step 1: Enter Email</h3>
+        
+        <div class="input-group">
+          <input type="email" name="email" id="request-email" placeholder="Enter your email" required>
+        </div>
+
+        <button type="submit" class="menu-btn login-btn">
+          Send Reset Code
+        </button>
+      </form>
+
+      <!-- STEP 2: Enter Code and New Password -->
+      <form class="login-form" id="reset-form" style="display: none;">
+        <h3 style="color: #6bff9e; text-align: center; margin: 10px 0;">Step 2: Reset Password</h3>
+        
+        <div class="input-group">
+          <input type="text" name="email" id="reset-email" placeholder="Email" readonly>
+        </div>
+
+        <div class="input-group">
+          <input type="text" name="reset_code" id="reset-code" placeholder="6-digit code from email" maxlength="6" pattern="\d{6}" required>
+        </div>
+
+        <div class="input-group">
+          <input type="password" name="new_password" id="new-password" placeholder="New Password (min 8 chars)" required>
+        </div>
+
+        <div class="input-group">
+          <input type="password" name="confirm_password" id="confirm-password" placeholder="Confirm Password" required>
+        </div>
+
+        <button type="submit" class="menu-btn login-btn">
+          Reset Password
+        </button>
+
+        <button type="button" class="menu-btn login-btn" style="margin-top: 10px; background: #555;" onclick="resetToStep1();">
+          Back to Step 1
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <a href="/login" class="forgot-link">← Back to Login</a>
+        <a href="/register" class="forgot-link">Don't have account? Register</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer-signature">
+    <span class="swords">⚔️</span>
+    <span class="glow-text">Night Watch Team</span>
+    <span class="swords">⚔️</span>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="animation.js"></script>
+  <script>
+    // Signed-in users do not need the reset flow.
+    (async function() {
+      const session = await getSession();
+      if (session) {
+        window.location.replace('/panel');
+      }
+    })();
+
+    const messageBox = document.getElementById('message-box');
+    const requestForm = document.getElementById('request-form');
+    const resetForm = document.getElementById('reset-form');
+    const requestEmail = document.getElementById('request-email');
+    const resetEmail = document.getElementById('reset-email');
+
+    // ========================================================================
+    // Step 1 asks the server to email a one-time reset code.
+    // ========================================================================
+    document.getElementById('request-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = requestEmail.value.trim();
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '';
+
+      try {
+        const formData = new FormData();
+        formData.append('email', email);
+
+        const response = await fetch('/functions/forget_password.php', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result) {
+          messageBox.textContent = '❌ ' + ((result && result.error) || 'Request failed. Please try again.');
+          return;
+        }
+
+        if (result.success) {
+          messageBox.style.color = '#6bff9e';
+          messageBox.textContent = '✅ ' + (result.message || 'Code sent to your email!');
+
+          // Switch the UI to the second form after the request succeeds.
+          setTimeout(() => {
+            resetEmail.value = email;
+            requestForm.style.display = 'none';
+            resetForm.style.display = 'block';
+            messageBox.textContent = '';
+          }, 1500);
+        } else {
+          messageBox.textContent = '❌ ' + (result.error || 'Request failed');
+        }
+      } catch (error) {
+        messageBox.textContent = '❌ Network error, please try again.';
+        console.error('Error:', error);
+      }
+    });
+
+    // ========================================================================
+    // Step 2 sends the code and the new password to the backend.
+    // ========================================================================
+    document.getElementById('reset-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = resetEmail.value;
+      const resetCode = document.getElementById('reset-code').value.trim();
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '';
+
+      // Quick browser-side validation before the request is sent.
+      if (!/^\d{6}$/.test(resetCode)) {
+        messageBox.textContent = '❌ Reset code must be 6 digits.';
+        return;
+      }
+
+      // The two password boxes must match.
+      if (newPassword !== confirmPassword) {
+        messageBox.textContent = '❌ Passwords do not match.';
+        return;
+      }
+
+      // Keep the same minimum length rule used by the backend.
+      if (newPassword.length < 8) {
+        messageBox.textContent = '❌ Password must be at least 8 characters.';
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('reset_code', resetCode);
+        formData.append('new_password', newPassword);
+        formData.append('confirm_password', confirmPassword);
+
+        const response = await fetch('/functions/reset_password.php', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result) {
+          messageBox.textContent = '❌ ' + ((result && result.error) || 'Reset failed. Please try again.');
+          return;
+        }
+
+        if (result.success) {
+          messageBox.style.color = '#6bff9e';
+          messageBox.textContent = '✅ ' + (result.message || 'Password reset successful!');
+
+          // After success the user signs in with the new password from the login page.
+          setTimeout(() => {
+            window.location.replace('/login');
+          }, 2000);
+        } else {
+          messageBox.textContent = '❌ ' + (result.error || 'Reset failed');
+        }
+      } catch (error) {
+        messageBox.textContent = '❌ Network error, please try again.';
+        console.error('Error:', error);
+      }
+    });
+
+    // ========================================================================
+    // Let the user restart the flow without reloading the page.
+    // ========================================================================
+    function resetToStep1() {
+      requestForm.style.display = 'block';
+      resetForm.style.display = 'none';
+      messageBox.textContent = '';
+      document.getElementById('reset-code').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-password').value = '';
+    }
+  </script>
+</body>
+</html>

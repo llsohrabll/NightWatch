@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='75' font-size='80' text-anchor='middle' fill='%23b0c7e9' font-family='Arial, sans-serif'%3E❄%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="login-container">
+    <div class="login-box">
+
+      <h1 class="site-title glow-text">VERIFY EMAIL</h1>
+      <p class="site-subtitle">COMPLETE YOUR REGISTRATION</p>
+
+      <div id="message-box" style="min-height: 24px; margin-bottom: 10px; color: #ff6b6b; text-align: center;"></div>
+
+      <form class="login-form" id="verify-form">
+        <p style="text-align: center; color: #aaa; margin-bottom: 20px;">
+          A verification code has been sent to your email. Enter it below to complete registration.
+        </p>
+
+        <div class="input-group">
+          <input type="email" name="email" id="email" placeholder="Email address" required readonly style="cursor: not-allowed; background: #2a2a3e;">
+        </div>
+
+        <div class="input-group">
+          <input type="text" name="verification_code" id="verification_code" placeholder="6-digit code" maxlength="6" pattern="\d{6}" required>
+        </div>
+
+        <button type="submit" class="menu-btn login-btn">Verify Email</button>
+      </form>
+
+      <div class="login-footer">
+        <a href="#" class="forgot-link" onclick="resendCode(event);">Resend code</a>
+        <a href="/register" class="forgot-link">← Back to Register</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer-signature">
+    <span class="swords">⚔️</span>
+    <span class="glow-text">Night Watch Team</span>
+    <span class="swords">⚔️</span>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="../animation.js"></script>
+  <script>
+    // ========================================================================
+    // If the browser already has a valid session, this page is no longer needed.
+    // ========================================================================
+    (async function() {
+      const session = await getSession();
+      if (session) {
+        window.location.replace('/panel');
+      }
+    })();
+
+    const messageBox = document.getElementById('message-box');
+    const emailInput = document.getElementById('email');
+
+    // ========================================================================
+    // The register page stored the email in sessionStorage so this page can reuse it.
+    const sessionEmail = sessionStorage.getItem('registration_email');
+    const registrationUserId = sessionStorage.getItem('registration_user_id');
+
+    if (!sessionEmail) {
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '❌ Registration data not found. Please register again.';
+      setTimeout(() => {
+        window.location.replace('/register');
+      }, 2000);
+    } else {
+      emailInput.value = sessionEmail;
+    }
+
+    // ========================================================================
+    // Send the typed 6-digit code to the backend.
+    // ========================================================================
+    document.getElementById('verify-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = emailInput.value;
+      const verificationCode = document.getElementById('verification_code').value.trim();
+
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '';
+
+      // The backend checks this too, but early browser validation feels better.
+      if (!/^\d{6}$/.test(verificationCode)) {
+        messageBox.textContent = '❌ Verification code must be 6 digits.';
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('verification_code', verificationCode);
+
+        const response = await fetch('/functions/verify_email.php', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result) {
+          messageBox.textContent = '❌ ' + ((result && result.error) || 'Verification failed. Please try again.');
+          return;
+        }
+
+        if (result.success) {
+          // Cleanup: the verify page no longer needs the saved registration data.
+          sessionStorage.removeItem('registration_email');
+          sessionStorage.removeItem('registration_user_id');
+
+          messageBox.style.color = '#6bff9e';
+          messageBox.textContent = '✅ ' + (result.message || 'Email verified successfully!');
+
+          // After success, the backend session is already active.
+          setTimeout(() => {
+            window.location.replace(result.redirect || '/panel');
+          }, 1500);
+        } else {
+          messageBox.textContent = '❌ ' + (result.error || 'Verification failed');
+        }
+      } catch (error) {
+        messageBox.textContent = '❌ Network error, please try again.';
+        console.error('Error:', error);
+      }
+    });
+
+    // ========================================================================
+    // This UI exists, but there is no real resend endpoint yet.
+    // ========================================================================
+    function resendCode(event) {
+      event.preventDefault();
+
+      const email = emailInput.value;
+      if (!email) {
+        messageBox.style.color = '#ff6b6b';
+        messageBox.textContent = '❌ Email not found.';
+        return;
+      }
+
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '';
+
+      // Right now we only show guidance to the user.
+      messageBox.style.color = '#ffb700';
+      messageBox.textContent = '⏳ Resending code...';
+
+      // A future version could call a dedicated resend endpoint here.
+      setTimeout(() => {
+        messageBox.style.color = '#aaa';
+        messageBox.textContent = 'Check your spam folder or register again to receive a new code.';
+      }, 500);
+    }
+  </script>
+</body>
+</html>

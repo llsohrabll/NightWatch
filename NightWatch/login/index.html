@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='75' font-size='80' text-anchor='middle' fill='%23b0c7e9' font-family='Arial, sans-serif'%3E❄%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Cloudflare Turnstile (uncomment when ready) -->
+  <!-- <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script> -->
+</head>
+
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="login-container">
+    <div class="login-box">
+
+      <h1 class="site-title glow-text">LOGIN</h1>
+      <p class="site-subtitle">USER ACCESS PANEL</p>
+
+      <div id="message-box" style="min-height: 24px; margin-bottom: 10px; color: #ff6b6b; text-align: center;"></div>
+
+      <form class="login-form" id="login-form">
+
+        <div class="input-group">
+          <input type="text" name="username" id="username" placeholder="Username or Email" required>
+        </div>
+
+        <div class="input-group">
+          <input type="password" name="password" id="password" placeholder="Password" required>
+        </div>
+
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="remember_me" id="remember_me">
+            <span class="checkbox-text">Remember me for one week</span>
+          </label>
+        </div>
+
+        <!-- <div class="cf-turnstile" data-sitekey="0x4AAAAAADAAtwU36LCe23pt"></div> -->
+
+        <button type="submit" class="menu-btn login-btn">
+          Authorise
+        </button>
+
+      </form>
+
+      <div class="login-footer">
+        <a href="/forgetpassword" class="forgot-link">Forgot password?</a>
+        <a href="/register" class="forgot-link">Register</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer-signature">
+    <span class="swords">⚔️</span>
+    <span class="glow-text">Night Watch Team</span>
+    <span class="swords">⚔️</span>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="animation.js"></script>
+  <script>
+    // ========================================================================
+    // If this browser is already signed in, skip the login form.
+    (async function() {
+      const session = await getSession();
+      if (session) {
+        // Send the user straight to the private panel.
+        window.location.replace('/panel');
+      }
+    })();
+
+    // ========================================================================
+    // Send the login form to the backend and show the result message.
+    // ========================================================================
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const messageBox = document.getElementById('message-box');
+      messageBox.style.color = '#ff6b6b';
+      messageBox.textContent = '';
+
+      try {
+        const response = await fetch('/functions/login.php', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result) {
+          messageBox.textContent = '❌ ' + ((result && result.error) || 'Login failed. Please try again.');
+          return;
+        }
+
+        if (result.success) {
+          messageBox.style.color = '#6bff9e';
+          messageBox.textContent = result.message || '✅ Login successful! Redirecting...';
+
+          setTimeout(() => {
+            window.location.replace(result.redirect || '/panel');
+          }, 700);
+        } else {
+          messageBox.textContent = '❌ ' + (result.error || 'Invalid username or password');
+        }
+      } catch (error) {
+        messageBox.textContent = '❌ Network error, please try again.';
+        console.error('Error:', error);
+      }
+    });
+  </script>
+</body>
+</html>
