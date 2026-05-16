@@ -1,0 +1,251 @@
+<?php
+// ============================================================================
+// UPLOAD_PHOTO.PHP - SAVE A USER'S PROFILE PHOTO
+// ============================================================================
+// The browser sends a file here using multipart/form-data. This endpoint
+// validates the file, stores it on disk, and saves the path in the database.
+
+declare(strict_types=1);
+
+// Load common utilities and database config
+require_once(__DIR__ . '/common.php');
+require_db_config_file();
+
+// Set security headers for all responses
+set_security_headers();
+
+// Enforce HTTPS on production
+enforce_https();
+
+// ============================================================================
+// File uploads change server state, so they must be POST requests.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    send_json(['success' => false, 'error' => 'Invalid request method.'], 405);
+}
+enforce_same_origin_post();
+
+// Only signed-in users can upload a photo for their own profile.
+$sessionUser = require_authenticated_session();
+
+// ============================================================================
+// VALIDATION: Check file was actually uploaded
+// ============================================================================
+if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+    $errorMessages = [
+        UPLOAD_ERR_INI_SIZE => 'File exceeds server upload limit.',
+        UPLOAD_ERR_FORM_SIZE => 'File exceeds form size limit.',
+        UPLOAD_ERR_PARTIAL => 'File upload was incomplete.',
+        UPLOAD_ERR_NO_FILE => 'No file was selected.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Upload temporary directory missing.',
+        UPLOAD_ERR_CANT_WRITE => 'Cannot write file to disk.',
+        UPLOAD_ERR_EXTENSION => 'Upload blocked by PHP extension.',
+    ];
+    
+    $errorCode = $_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE;
+    $errorMsg = $errorMessages[$errorCode] ?? 'Unknown upload error.';
+    send_json(['success' => false, 'error' => $errorMsg], 400);
+}
+
+// ============================================================================
+// The filename extension is the first quick filter.
+// ============================================================================
+$uploadedFile = $_FILES['photo'];
+$temporaryPath = (string) ($uploadedFile['tmp_name'] ?? '');
+
+if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+    send_json([
+        'success' => false,
+        'error' => 'Invalid upload source.'
+    ], 400);
+}
+
+$fileType = strtolower(pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
+
+// PNG is allowed too, not just JPEG.
+$allowedTypes = ['jpg', 'jpeg', 'png'];
+$extensionMimeMap = [
+    'jpg' => ['image/jpeg', 'image/jpg'],
+    'jpeg' => ['image/jpeg', 'image/jpg'],
+    'png' => ['image/png'],
+];
+
+if (!in_array($fileType, $allowedTypes, true)) {
+    send_json([
+        'success' => false,
+        'error' => 'Invalid file type. Only JPG, JPEG and PNG files are allowed.'
+    ], 400);
+}
+
+// ============================================================================
+// Large files are rejected before anything is written to disk.
+// ============================================================================
+$maxFileSize = 500 * 1024; // 500KB in bytes
+$fileSize = (int) $uploadedFile['size'];
+
+if ($fileSize > $maxFileSize) {
+    send_json([
+        'success' => false,
+        'error' => 'File size exceeds 500KB limit. Please choose a smaller file.'
+    ], 400);
+}
+
+// ============================================================================
+// A fake extension is not enough; inspect the uploaded temp file itself.
+$imageInfo = @getimagesize($temporaryPath);
+
+if ($imageInfo === false) {
+    send_json([
+        'success' => false,
+        'error' => 'Uploaded file is not a valid image.'
+    ], 400);
+}
+
+// The detected MIME type must also match an approved image type.
+$allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+$imageMime = (string) ($imageInfo['mime'] ?? '');
+if (
+    !in_array($imageMime, $allowedMimes, true)
+    || !in_array($imageMime, $extensionMimeMap[$fileType] ?? [], true)
+) {
+    send_json([
+        'success' => false,
+        'error' => 'Invalid image type. Only JPG/JPEG/PNG images are allowed.'
+    ], 400);
+}
+
+// finfo gives a second MIME check that is harder to fool with crafted headers.
+if (function_exists('finfo_open')) {
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    if ($finfo !== false) {
+        $finfoMime = (string) finfo_file($finfo, $temporaryPath);
+        finfo_close($finfo);
+
+        if (
+            !in_array($finfoMime, $allowedMimes, true)
+            || !in_array($finfoMime, $extensionMimeMap[$fileType] ?? [], true)
+        ) {
+            send_json([
+                'success' => false,
+                'error' => 'Invalid image type. Only JPG/JPEG/PNG images are allowed.'
+            ], 400);
+        }
+    }
+}
+
+// ============================================================================
+// Build the filesystem path where uploaded photos live.
+$uploadDir = __DIR__ . '/../uploads/photos/';
+
+// Create the folder if the deployment does not have it yet.
+if (!is_dir($uploadDir)) {
+    // Try to create directory if it doesn't exist
+    if (!@mkdir($uploadDir, 0755, true)) {
+        send_json([
+            'success' => false,
+            'error' => 'Upload directory could not be created.'
+        ], 500);
+    }
+}
+
+// Verify directory is writable
+if (!is_writable($uploadDir)) {
+    send_json([
+        'success' => false,
+        'error' => 'Upload directory is not writable. Please contact the administrator.'
+    ], 500);
+}
+
+// ============================================================================
+// Use a random filename so two uploads do not overwrite each other.
+$newFilename = $sessionUser['user_id'] . '_' . bin2hex(random_bytes(16)) . '.' . $fileType;
+$filePath = $uploadDir . $newFilename;
+
+// Open the database before making the upload permanent so a DB outage does not
+// leave an orphaned file behind.
+$conn = open_db_connection();
+
+// ============================================================================
+// PHP first stores uploads in a temp folder. move_uploaded_file() makes it permanent.
+// ============================================================================
+if (!move_uploaded_file($temporaryPath, $filePath)) {
+    $conn->close();
+    send_json([
+        'success' => false,
+        'error' => 'Failed to save the uploaded file.'
+    ], 500);
+}
+
+@chmod($filePath, 0644);
+
+// ============================================================================
+// Read the previous photo path so the old file can be deleted after a successful update.
+// ============================================================================
+$stmt = $conn->prepare("SELECT photo_path FROM users WHERE id = ?");
+if (!$stmt) {
+    $conn->close();
+    @unlink($filePath);
+    send_json(['success' => false, 'error' => 'Database query failed.'], 500);
+}
+
+$stmt->bind_param("i", $sessionUser['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$oldPhotoPath = $row['photo_path'] ?? null;
+$stmt->close();
+
+// ============================================================================
+// Save the new relative path in the database before deleting the old photo.
+// If the database update fails, the old photo remains valid and the new file is removed.
+$relativePath = 'uploads/photos/' . $newFilename;
+
+$updateStmt = $conn->prepare("UPDATE users SET photo_path = ? WHERE id = ?");
+if (!$updateStmt) {
+    $conn->close();
+    @unlink($filePath);
+    send_json(['success' => false, 'error' => 'Database update failed.'], 500);
+}
+
+$updateStmt->bind_param("si", $relativePath, $sessionUser['user_id']);
+
+if (!$updateStmt->execute()) {
+    $updateStmt->close();
+    $conn->close();
+    @unlink($filePath);
+    send_json(['success' => false, 'error' => 'Failed to update user profile.'], 500);
+}
+
+$updateStmt->close();
+
+// ============================================================================
+// Delete the old photo only after the new path is safely stored in the database.
+// ============================================================================
+if ($oldPhotoPath !== null && $oldPhotoPath !== '') {
+    $oldSafePhotoPath = safe_public_photo_path((string) $oldPhotoPath);
+    if ($oldSafePhotoPath !== null) {
+        $oldFilePath = __DIR__ . '/../' . $oldSafePhotoPath;
+        $oldRealPath = realpath($oldFilePath);
+        $uploadRealPath = realpath($uploadDir);
+
+        if (
+            $oldRealPath !== false
+            && $uploadRealPath !== false
+            && strpos($oldRealPath, $uploadRealPath . DIRECTORY_SEPARATOR) === 0
+            && is_file($oldRealPath)
+        ) {
+            @unlink($oldRealPath);
+        }
+    }
+}
+
+$conn->close();
+
+// ============================================================================
+// The browser uses this path to refresh the avatar immediately.
+// ============================================================================
+send_json([
+    'success' => true,
+    'message' => 'Photo uploaded successfully.',
+    'photo_path' => $relativePath
+]);
+?>

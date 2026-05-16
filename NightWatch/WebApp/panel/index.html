@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Watch Panel | Writeups</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="space-canvas" class="bg-canvas" aria-hidden="true"></canvas>
+  <div class="cosmic-noise" aria-hidden="true"></div>
+  <div class="aurora aurora-one" aria-hidden="true"></div>
+  <div class="aurora aurora-two" aria-hidden="true"></div>
+
+  <div class="panel-shell">
+    <aside class="sidebar glass-panel reveal-card">
+      <a href="../" class="brand-block">
+        <img src="/assets/nightwatch_symbol.png" alt="Night Watch" class="brand-logo" />
+        <div>
+          <p class="eyebrow">Night Watch</p>
+          <h2>Writeup Panel</h2>
+        </div>
+      </a>
+
+      <div class="profile-section">
+        <div class="avatar-wrapper" id="avatar-wrapper">
+          <span class="avatar-orbit orbit-a" aria-hidden="true"></span>
+          <span class="avatar-orbit orbit-b" aria-hidden="true"></span>
+          <div class="avatar" id="profile-avatar">NW</div>
+          <button class="avatar-edit-btn" id="photo-edit-btn" title="Edit photo" aria-label="Edit profile photo">
+            <span class="edit-icon">✎</span>
+          </button>
+        </div>
+        <p class="profile-label">Signed in as</p>
+        <h1 class="user-name">Loading...</h1>
+        <p class="user-rank">Night Watch member</p>
+      </div>
+
+      <nav class="side-nav" aria-label="Panel navigation">
+        <a href="#writeup-editor" class="nav-btn active">
+          <span class="nav-icon">✎</span>
+          <span>
+            <strong>Write</strong>
+            <small>Publish a writeup</small>
+          </span>
+        </a>
+        <a href="#fresh-writeups" class="nav-btn">
+          <span class="nav-icon">✦</span>
+          <span>
+            <strong>Fresh writeups</strong>
+            <small>Latest 3 posts</small>
+          </span>
+        </a>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="note-dot"></span>
+        <p>Publish educational, authorized research. Do not share live secrets or private targets.</p>
+      </div>
+
+      <button class="logout-btn">Log out</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar glass-panel reveal-card">
+        <div>
+          <p class="eyebrow">Member access</p>
+          <h2 class="panel-title">Publish clean security writeups.</h2>
+          <p class="panel-subtitle">Your session is verified with a server-side token before this panel loads.</p>
+        </div>
+        <div class="status-indicator">
+          <span class="pulse-dot"></span> Session active
+        </div>
+      </header>
+
+      <section class="hero-grid panel-writeup-grid">
+        <article class="mission-card glass-panel reveal-card" id="writeup-editor">
+          <div class="mission-copy writeup-editor-copy">
+            <p class="eyebrow">New writeup</p>
+            <h3>Document what you found and what others can learn.</h3>
+            <p>Use this for CTFs, labs, defensive lessons, and responsible research notes.</p>
+
+            <form id="writeup-form" class="writeup-form">
+              <label>
+                <span>Title</span>
+                <input type="text" name="title" id="writeup-title" maxlength="140" placeholder="Example: SQL injection lab walkthrough" required>
+              </label>
+
+              <label>
+                <span>Markdown body</span>
+                <textarea name="content_md" id="writeup-content" rows="12" maxlength="20000" placeholder="Write the goal, recon steps, failed attempts, finding, fix, and lessons learned." required></textarea>
+              </label>
+
+              <div class="writeup-form-actions">
+                <button type="submit" class="publish-btn" id="publish-writeup-btn">Publish writeup</button>
+                <p id="writeup-message" class="writeup-message" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+        </article>
+
+        <article class="session-card glass-panel reveal-card">
+          <div class="session-icon" aria-hidden="true">◌</div>
+          <p class="eyebrow">Session lock</p>
+          <h3 id="token-expiry-label">CHECKING</h3>
+          <p id="token-expiry-text">Checking session status...</p>
+        </article>
+      </section>
+
+      <section class="activity-log glass-panel reveal-card" id="fresh-writeups">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Fresh writeups</p>
+            <h3>Latest 3 community posts</h3>
+          </div>
+          <span class="tiny-badge">Database feed</span>
+        </div>
+        <div class="fresh-writeups-list" id="fresh-writeups-list" aria-live="polite">
+          <div class="loading-spinner">Loading writeups...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="photo-upload-modal">
+    <div class="modal-content photo-upload-modal">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Profile image</p>
+          <h3>Upload avatar</h3>
+        </div>
+        <button class="modal-close" id="close-photo-modal" aria-label="Close photo upload modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-info">
+          <p>Allowed formats: <strong>JPG, JPEG, PNG</strong></p>
+          <p>Maximum size: <strong>500KB</strong></p>
+        </div>
+
+        <form id="photo-upload-form" class="photo-upload-form">
+          <div class="file-input-wrapper">
+            <input type="file" id="photo-input" name="photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png" style="display: none;">
+            <label for="photo-input" class="file-input-label">
+              <span class="file-icon">＋</span>
+              <span class="file-text">Choose an avatar image or drag it here</span>
+            </label>
+            <div class="file-preview-wrapper" id="file-preview-wrapper" style="display: none;">
+              <img id="file-preview" class="file-preview" alt="Preview">
+              <button type="button" class="remove-file-btn" id="remove-file-btn">Remove</button>
+            </div>
+          </div>
+
+          <div class="upload-error" id="upload-error" style="display: none;"></div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="cancel-upload">Cancel</button>
+            <button type="submit" class="btn-upload" id="submit-upload">Upload photo</button>
+          </div>
+        </form>
+
+        <div class="upload-progress" id="upload-progress" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <p class="progress-text">Uploading... <span id="progress-percent">0</span>%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="animation.js"></script>
+  <script>
+    let tokenExpiryTimer = null;
+    let expiryHandled = false;
+
+    function formatDuration(msLeft) {
+      const totalSeconds = Math.max(0, Math.ceil(msLeft / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+      if (minutes > 0) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    }
+
+    function parseExpiry(value) {
+      if (!value) return null;
+      const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T');
+      const parsed = Date.parse(normalized);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function safePhotoUrl(photoPath) {
+      let normalized = String(photoPath || '').trim();
+      if (!normalized) return '';
+      normalized = normalized.replace(/\\/g, '/').replace(/^\/+/, '');
+      try {
+        normalized = decodeURIComponent(normalized).replace(/\\/g, '/').replace(/^\/+/, '');
+      } catch (error) {
+        return '';
+      }
+      if (normalized.includes('..') || normalized.includes('//')) return '';
+      if (!/^uploads\/photos\/[A-Za-z0-9._-]+\.(?:jpe?g|png)$/i.test(normalized)) return '';
+      return `/${normalized}`;
+    }
+
+    function renderTokenNotification(expiresAt) {
+      const label = document.getElementById('token-expiry-label');
+      const text = document.getElementById('token-expiry-text');
+      if (!label || !text) return;
+      if (!Number.isFinite(expiresAt)) {
+        label.textContent = 'UNKNOWN';
+        text.textContent = 'Token expiration could not be determined.';
+        return;
+      }
+      const msLeft = expiresAt - Date.now();
+      if (msLeft <= 0) {
+        label.textContent = 'EXPIRED';
+        text.textContent = 'Your token has expired. Redirecting to login...';
+        return;
+      }
+      label.textContent = 'TOKEN';
+      text.textContent = `Expires in ${formatDuration(msLeft)}.`;
+    }
+
+    function startTokenCountdown(expiresAt) {
+      if (tokenExpiryTimer) window.clearInterval(tokenExpiryTimer);
+      expiryHandled = false;
+      renderTokenNotification(expiresAt);
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        tokenExpiryTimer = null;
+        if (!expiryHandled) {
+          expiryHandled = true;
+          window.setTimeout(() => clearAuth('/login'), 600);
+        }
+        return;
+      }
+      tokenExpiryTimer = window.setInterval(() => {
+        renderTokenNotification(expiresAt);
+        if (expiresAt <= Date.now()) {
+          window.clearInterval(tokenExpiryTimer);
+          tokenExpiryTimer = null;
+          if (!expiryHandled) {
+            expiryHandled = true;
+            window.setTimeout(() => clearAuth('/login'), 600);
+          }
+        }
+      }, 1000);
+    }
+
+    function initializeAvatar(photoPath, username) {
+      const avatar = document.getElementById('profile-avatar');
+      if (!avatar) return;
+      const photoUrl = safePhotoUrl(photoPath);
+      if (photoUrl) {
+        avatar.style.backgroundImage = `url('${photoUrl}')`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+        avatar.classList.add('has-photo');
+        avatar.textContent = '';
+      } else {
+        avatar.style.backgroundImage = '';
+        avatar.classList.remove('has-photo');
+        avatar.textContent = String(username || 'NW').substring(0, 2).toUpperCase();
+      }
+    }
+
+    function formatDate(value) {
+      const timestamp = Number(value);
+      if (!Number.isFinite(timestamp)) return '';
+      return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(timestamp));
+    }
+
+    function renderFreshWriteups(writeups) {
+      const container = document.getElementById('fresh-writeups-list');
+      if (!container) return;
+      container.textContent = '';
+
+      if (!Array.isArray(writeups) || writeups.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'fresh-empty';
+        empty.textContent = 'No writeups have been published yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      writeups.slice(0, 3).forEach((writeup) => {
+        const item = document.createElement('article');
+        item.className = 'fresh-writeup-item';
+
+        const title = document.createElement('h4');
+        title.textContent = writeup.title || 'Untitled writeup';
+
+        const excerpt = document.createElement('p');
+        excerpt.textContent = writeup.excerpt || 'No summary available.';
+
+        const meta = document.createElement('span');
+        meta.textContent = `${writeup.author?.username || 'Member'}${writeup.published_at_ms ? ' • ' + formatDate(writeup.published_at_ms) : ''}`;
+
+        item.append(title, excerpt, meta);
+        container.appendChild(item);
+      });
+    }
+
+    async function refreshFreshWriteups() {
+      try {
+        const response = await authFetch('/functions/get_writeups.php?limit=3');
+        if (!response) return;
+        const data = await response.json();
+        if (data && data.success) renderFreshWriteups(data.writeups || []);
+      } catch (error) {
+        const container = document.getElementById('fresh-writeups-list');
+        if (container) container.textContent = 'Could not load writeups.';
+      }
+    }
+
+    async function loadPanelData() {
+      const response = await authFetch('/functions/panel.php');
+      if (!response) return null;
+      const data = await response.json().catch(() => null);
+      if (!data || !data.success) {
+        await clearAuth('/login');
+        return null;
+      }
+
+      document.querySelector('.user-name').textContent = data.username;
+      initializeAvatar(data.photo_path, data.username);
+      renderFreshWriteups(data.latest_writeups || []);
+      const expiresAt = Number(data.expires_at_ms) || parseExpiry(data.expires_at);
+      startTokenCountdown(expiresAt);
+      return data;
+    }
+
+    document.querySelector('.logout-btn').addEventListener('click', async () => {
+      await clearAuth('/login');
+    });
+
+    async function initPanel() {
+      const session = await requireAuth('/login');
+      if (!session) return;
+      await loadPanelData();
+    }
+
+    const writeupForm = document.getElementById('writeup-form');
+    const writeupMessage = document.getElementById('writeup-message');
+    const publishButton = document.getElementById('publish-writeup-btn');
+
+    writeupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      writeupMessage.textContent = '';
+      writeupMessage.className = 'writeup-message';
+      publishButton.disabled = true;
+
+      try {
+        const formData = new FormData(writeupForm);
+        const response = await authFetch('/functions/create_writeup.php', {
+          method: 'POST',
+          body: formData,
+          headers: { Accept: 'application/json' },
+        });
+        if (!response) return;
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result || !result.success) {
+          throw new Error(result?.error || 'Writeup could not be published.');
+        }
+        writeupMessage.classList.add('success');
+        writeupMessage.textContent = result.message || 'Writeup published.';
+        writeupForm.reset();
+        await refreshFreshWriteups();
+      } catch (error) {
+        writeupMessage.classList.add('error');
+        writeupMessage.textContent = error.message || 'Writeup could not be published.';
+      } finally {
+        publishButton.disabled = false;
+      }
+    });
+
+    const PHOTO_CONFIG = {
+      maxSize: 500 * 1024,
+      allowedTypes: ['jpg', 'jpeg', 'png'],
+      allowedMimes: ['image/jpeg', 'image/jpg', 'image/png']
+    };
+
+    const photoModal = document.getElementById('photo-upload-modal');
+    const photoForm = document.getElementById('photo-upload-form');
+    const photoInput = document.getElementById('photo-input');
+    const fileInputLabel = document.querySelector('.file-input-label');
+    const filePreviewWrapper = document.getElementById('file-preview-wrapper');
+    const filePreview = document.getElementById('file-preview');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const uploadError = document.getElementById('upload-error');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const submitBtn = document.getElementById('submit-upload');
+    const photoEditBtn = document.getElementById('photo-edit-btn');
+    const closePhotoModal = document.getElementById('close-photo-modal');
+    const cancelUpload = document.getElementById('cancel-upload');
+    let selectedFile = null;
+    let isUploading = false;
+
+    function closePhotoModalFn() {
+      photoModal.classList.remove('show');
+      resetUploadForm();
+    }
+
+    photoEditBtn.addEventListener('click', () => {
+      photoModal.classList.add('show');
+      resetUploadForm();
+    });
+    closePhotoModal.addEventListener('click', closePhotoModalFn);
+    cancelUpload.addEventListener('click', closePhotoModalFn);
+    photoModal.addEventListener('click', (event) => {
+      if (event.target === photoModal) closePhotoModalFn();
+    });
+
+    photoInput.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (file) validateAndPreviewFile(file);
+    });
+
+    removeFileBtn.addEventListener('click', () => {
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+      uploadError.style.display = 'none';
+    });
+
+    fileInputLabel.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      fileInputLabel.classList.add('drag-over');
+    });
+    fileInputLabel.addEventListener('dragleave', () => fileInputLabel.classList.remove('drag-over'));
+    fileInputLabel.addEventListener('drop', (event) => {
+      event.preventDefault();
+      fileInputLabel.classList.remove('drag-over');
+      const file = event.dataTransfer?.files?.[0];
+      if (file) validateAndPreviewFile(file);
+    });
+
+    photoForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!selectedFile || isUploading) return;
+      await uploadPhoto();
+    });
+
+    function validateAndPreviewFile(file) {
+      uploadError.style.display = 'none';
+      uploadError.textContent = '';
+      const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (!(file instanceof File) || !file.name || file.size <= 0) return showError('Please choose a valid image file.');
+      if (!PHOTO_CONFIG.allowedTypes.includes(extension)) return showError('Only JPG, JPEG, and PNG files are allowed.');
+      if (file.size > PHOTO_CONFIG.maxSize) return showError('File size exceeds 500KB.');
+      if (!PHOTO_CONFIG.allowedMimes.includes(file.type)) return showError('Only JPG/JPEG/PNG images are allowed.');
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        filePreview.src = event.target?.result ?? '';
+        filePreviewWrapper.style.display = 'flex';
+        fileInputLabel.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showError(message) {
+      uploadError.textContent = message;
+      uploadError.style.display = 'block';
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+    }
+
+    async function uploadPhoto() {
+      isUploading = true;
+      submitBtn.disabled = true;
+      uploadProgress.style.display = 'flex';
+      uploadError.style.display = 'none';
+      const formData = new FormData();
+      formData.append('photo', selectedFile);
+
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.max(0, Math.min(100, (event.loaded / event.total) * 100));
+            progressFill.style.width = percent + '%';
+            progressPercent.textContent = String(Math.round(percent));
+          }
+        });
+        xhr.addEventListener('load', async () => {
+          if (xhr.status === 401) {
+            completeUpload();
+            await clearAuth('/login');
+            return;
+          }
+          let response = {};
+          try {
+            response = JSON.parse(xhr.responseText || '{}');
+          } catch (error) {
+            response = {};
+          }
+          if (xhr.status === 200 && response.success && safePhotoUrl(response.photo_path)) {
+            initializeAvatar(response.photo_path, document.querySelector('.user-name').textContent);
+            window.setTimeout(closePhotoModalFn, 400);
+          } else {
+            showUploadError(response.error || 'Upload failed.');
+          }
+          completeUpload();
+        });
+        xhr.addEventListener('error', () => {
+          showUploadError('Network error. Please try again.');
+          completeUpload();
+        });
+        xhr.open('POST', '/functions/upload_photo.php');
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      } catch (error) {
+        showUploadError('An error occurred. Please try again.');
+        completeUpload();
+      }
+    }
+
+    function showUploadError(message) {
+      uploadError.textContent = message;
+      uploadError.style.display = 'block';
+      uploadProgress.style.display = 'none';
+    }
+
+    function completeUpload() {
+      isUploading = false;
+      submitBtn.disabled = false;
+      uploadProgress.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0';
+    }
+
+    function resetUploadForm() {
+      selectedFile = null;
+      photoInput.value = '';
+      filePreviewWrapper.style.display = 'none';
+      fileInputLabel.style.display = 'flex';
+      uploadError.style.display = 'none';
+      uploadProgress.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0';
+      submitBtn.disabled = false;
+      isUploading = false;
+    }
+
+    initPanel();
+  </script>
+</body>
+</html>
