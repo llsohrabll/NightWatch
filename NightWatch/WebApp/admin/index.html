@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Watch Admin | Moderation</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="star-canvas" aria-hidden="true"></canvas>
+
+  <header class="site-header admin-header">
+    <a class="brand" href="/" aria-label="Night Watch home">
+      <img src="/assets/nightwatch_symbol.png" alt="Night Watch" class="brand-logo">
+      <span>
+        <strong>Night Watch Admin</strong>
+        <small>Moderate community writeups</small>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="Admin navigation">
+      <a href="/panel">Panel</a>
+      <a href="/">Public site</a>
+      <button type="button" id="logout-button" class="admin-nav-button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="admin-shell">
+    <section class="hero-card admin-card">
+      <div class="admin-title-row">
+        <div>
+          <p class="kicker">Moderation queue</p>
+          <h1>Review writeups before they go public.</h1>
+          <p class="admin-muted">Admin endpoints still enforce server-side authorization. This page is only a safer UI for those endpoints.</p>
+        </div>
+        <span id="admin-user-badge" class="tag">Checking access</span>
+      </div>
+
+      <div class="admin-toolbar" aria-label="Moderation filters">
+        <button type="button" class="filter-button active" data-status="pending">Pending</button>
+        <button type="button" class="filter-button" data-status="published">Published</button>
+        <button type="button" class="filter-button" data-status="rejected">Rejected</button>
+        <button type="button" class="filter-button" data-status="draft">Drafts</button>
+      </div>
+
+      <p id="admin-message" class="admin-message" role="status" aria-live="polite"></p>
+      <div id="moderation-list" class="moderation-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/animation.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "nightwatch-webapp-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser-driven E2E tests for NightWatch against Docker Compose.",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:docker": "bash scripts/e2e-docker.sh",
+    "lint:js": "find WebApp tests -name '*.js' -print0 | xargs -0 -n1 node --check"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

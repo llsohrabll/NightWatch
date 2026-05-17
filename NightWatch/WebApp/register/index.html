@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="page-header">
+    <a href="../" class="logo-link">
+      <img src="/assets/nightwatch_symbol.png" alt="Night Watch" class="logo-icon" />
+    </a>
+  </header>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="login-container">
+    <div class="login-box">
+
+      <h1 class="site-title glow-text">Join the Map</h1>
+      <p class="site-subtitle">Create your writer account</p>
+
+      <div id="message-box" class="form-message"></div>
+
+      <form class="login-form" id="register-form">
+        <div class="input-group">
+          <input type="text" name="username" id="username" placeholder="Username" required>
+        </div>
+        <div class="input-group">
+          <input type="email" name="email" id="email" placeholder="Email" required>
+        </div>
+        <div class="input-group">
+          <input type="password" name="password" id="password" placeholder="Password" required>
+        </div>
+        <div class="input-group">
+          <input type="password" name="confirm_password" id="confirm_password" placeholder="Retype password" required>
+        </div>
+
+        <button type="submit" class="menu-btn login-btn">Register</button>
+      </form>
+
+      <div class="login-footer">
+        <a href="/login" class="forgot-link">Already have an account?</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer-signature">
+    <span class="swords">✦</span>
+    <span class="glow-text">Night Watch Community</span>
+    <span class="swords">✦</span>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="animation.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

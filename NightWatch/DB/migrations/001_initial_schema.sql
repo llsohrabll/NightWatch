@@ -1,0 +1,8 @@
+-- NightWatch migration 001: bootstrap marker.
+-- Fresh installs should import DB/DB.sql directly with the mysql client after
+-- replacing CHANGE_ME_STRONG_PASSWORD. The PHP migration runner intentionally
+-- skips SOURCE-based bootstrap files and applies only incremental migrations
+-- to the configured NIGHTWATCH_DB_NAME database.
+--
+-- Manual mysql-client bootstrap, from the project root:
+-- SOURCE DB/DB.sql;
