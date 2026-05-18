@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /functions/
-Disallow: /panel/
-Disallow: /uploads/
-Sitemap: /sitemap.xml
