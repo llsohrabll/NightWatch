@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Watch Panel | Writeups</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="space-canvas" class="bg-canvas" aria-hidden="true"></canvas>
+  <div class="cosmic-noise" aria-hidden="true"></div>
+  <div class="aurora aurora-one" aria-hidden="true"></div>
+  <div class="aurora aurora-two" aria-hidden="true"></div>
+
+  <div class="panel-shell">
+    <aside class="sidebar glass-panel reveal-card">
+      <a href="../" class="brand-block">
+        <img src="/assets/nightwatch_symbol.png" alt="Night Watch" class="brand-logo" />
+        <div>
+          <p class="eyebrow">Night Watch</p>
+          <h2>Writeup Panel</h2>
+        </div>
+      </a>
+
+      <div class="profile-section">
+        <div class="avatar-wrapper" id="avatar-wrapper">
+          <span class="avatar-orbit orbit-a" aria-hidden="true"></span>
+          <span class="avatar-orbit orbit-b" aria-hidden="true"></span>
+          <div class="avatar" id="profile-avatar"><img src="/assets/nightwatch_symbol.png" alt="" id="profile-avatar-img" class="avatar-image is-hidden"><span id="profile-avatar-initials">NW</span></div>
+          <button class="avatar-edit-btn" id="photo-edit-btn" title="Edit photo" aria-label="Edit profile photo">
+            <span class="edit-icon">✎</span>
+          </button>
+        </div>
+        <p class="profile-label">Signed in as</p>
+        <h1 class="user-name">Loading...</h1>
+        <p class="user-email" id="user-email">Checking email...</p>
+        <p class="user-rank">Night Watch member</p>
+      </div>
+
+      <nav class="side-nav" aria-label="Panel navigation">
+        <a href="#writeup-editor" class="nav-btn active">
+          <span class="nav-icon">✎</span>
+          <span>
+            <strong>Write</strong>
+            <small>Publish a writeup</small>
+          </span>
+        </a>
+        <a href="#fresh-writeups" class="nav-btn">
+          <span class="nav-icon">✦</span>
+          <span>
+            <strong>Fresh writeups</strong>
+            <small>Latest 3 posts</small>
+          </span>
+        </a>
+        <a href="#account-settings" class="nav-btn">
+          <span class="nav-icon">@</span>
+          <span>
+            <strong>Account</strong>
+            <small>Change verified email</small>
+          </span>
+        </a>
+        <a href="/admin" class="nav-btn is-hidden" id="admin-nav-link">
+          <span class="nav-icon">⚑</span>
+          <span>
+            <strong>Admin</strong>
+            <small>Moderate writeups</small>
+          </span>
+        </a>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="note-dot"></span>
+        <p>Publish educational, authorized research. Do not share live secrets or private targets.</p>
+      </div>
+
+      <button class="logout-btn">Log out</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar glass-panel reveal-card">
+        <div>
+          <p class="eyebrow">Member access</p>
+          <h2 class="panel-title">Publish clean security writeups.</h2>
+          <p class="panel-subtitle">Your session is verified with a server-side token before this panel loads.</p>
+        </div>
+        <div class="status-indicator">
+          <span class="pulse-dot"></span> Session active
+        </div>
+      </header>
+
+      <section class="hero-grid panel-writeup-grid">
+        <article class="mission-card glass-panel reveal-card" id="writeup-editor">
+          <div class="mission-copy writeup-editor-copy">
+            <p class="eyebrow">New writeup</p>
+            <h3>Document what you found and what others can learn.</h3>
+            <p>Use this for CTFs, labs, defensive lessons, and responsible research notes.</p>
+
+            <form id="writeup-form" class="writeup-form">
+              <label>
+                <span>Title</span>
+                <input type="text" name="title" id="writeup-title" maxlength="140" placeholder="Example: SQL injection lab walkthrough" required>
+              </label>
+
+              <label>
+                <span>Category</span>
+                <input type="text" name="category" id="writeup-category" maxlength="40" placeholder="web-security, ctf, blue-team">
+              </label>
+
+              <label>
+                <span>Tags</span>
+                <input type="text" name="tags" id="writeup-tags" maxlength="255" placeholder="sql-injection, auth, logging">
+              </label>
+
+              <label>
+                <span>Markdown body</span>
+                <textarea name="content_md" id="writeup-content" rows="12" maxlength="20000" placeholder="Write the goal, recon steps, failed attempts, finding, fix, and lessons learned." required></textarea>
+              </label>
+
+              <p class="markdown-policy">Allowed Markdown: headings, lists, links, code blocks, emphasis, and tables. Raw scripts, iframes, forms, and embedded objects are rejected.</p>
+
+              <div class="writeup-form-actions">
+                <button type="submit" class="publish-btn" id="publish-writeup-btn" data-status="published">Publish writeup</button>
+                <button type="submit" class="publish-btn secondary" id="save-draft-btn" data-status="draft">Save draft</button>
+                <p id="writeup-message" class="writeup-message" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+        </article>
+
+        <article class="session-card glass-panel reveal-card">
+          <div class="session-icon" aria-hidden="true">◌</div>
+          <p class="eyebrow">Session lock</p>
+          <h3 id="token-expiry-label">CHECKING</h3>
+          <p id="token-expiry-text">Checking session status...</p>
+        </article>
+      </section>
+
+      <section class="activity-log glass-panel reveal-card" id="fresh-writeups">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Fresh writeups</p>
+            <h3>Latest 3 community posts</h3>
+          </div>
+          <span class="tiny-badge">Database feed</span>
+        </div>
+        <div class="fresh-writeups-list" id="fresh-writeups-list" aria-live="polite">
+          <div class="loading-spinner">Loading writeups...</div>
+        </div>
+      </section>
+
+      <section class="activity-log glass-panel reveal-card" id="account-settings">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Account security</p>
+            <h3>Change your email safely</h3>
+          </div>
+          <span class="tiny-badge">Verified change</span>
+        </div>
+
+        <div class="account-settings-grid">
+          <form id="email-change-request-form" class="writeup-form account-form">
+            <label>
+              <span>New email address</span>
+              <input type="email" name="new_email" id="new-email" maxlength="255" placeholder="new-address@example.com" autocomplete="email" required>
+            </label>
+            <label>
+              <span>Current password</span>
+              <input type="password" name="current_password" id="current-password" autocomplete="current-password" required>
+            </label>
+            <div class="writeup-form-actions">
+              <button type="submit" class="publish-btn" id="request-email-change-btn">Send confirmation code</button>
+            </div>
+          </form>
+
+          <form id="email-change-verify-form" class="writeup-form account-form is-hidden">
+            <label>
+              <span>6-digit confirmation code</span>
+              <input type="text" name="verification_code" id="email-change-code" maxlength="6" pattern="\d{6}" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required>
+            </label>
+            <div class="writeup-form-actions">
+              <button type="submit" class="publish-btn secondary" id="verify-email-change-btn">Confirm new email</button>
+            </div>
+          </form>
+        </div>
+        <p id="email-change-message" class="writeup-message" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="photo-upload-modal">
+    <div class="modal-content photo-upload-modal">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Profile image</p>
+          <h3>Upload avatar</h3>
+        </div>
+        <button class="modal-close" id="close-photo-modal" aria-label="Close photo upload modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-info">
+          <p>Allowed formats: <strong>JPG, JPEG, PNG</strong></p>
+          <p>Maximum size: <strong>500KB</strong></p>
+        </div>
+
+        <form id="photo-upload-form" class="photo-upload-form">
+          <div class="file-input-wrapper">
+            <input type="file" id="photo-input" name="photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="visually-hidden-file">
+            <label for="photo-input" class="file-input-label">
+              <span class="file-icon">＋</span>
+              <span class="file-text">Choose an avatar image or drag it here</span>
+            </label>
+            <div class="file-preview-wrapper is-hidden" id="file-preview-wrapper">
+              <img id="file-preview" class="file-preview" alt="Preview">
+              <button type="button" class="remove-file-btn" id="remove-file-btn">Remove</button>
+            </div>
+          </div>
+
+          <div class="upload-error is-hidden" id="upload-error"></div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="cancel-upload">Cancel</button>
+            <button type="submit" class="btn-upload" id="submit-upload">Upload photo</button>
+          </div>
+        </form>
+
+        <div class="upload-progress is-hidden" id="upload-progress">
+          <div class="progress-bar">
+            <progress class="progress-fill" id="progress-fill" max="100" value="0" aria-label="Upload progress"></progress>
+          </div>
+          <p class="progress-text">Uploading... <span id="progress-percent">0</span>%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="animation.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

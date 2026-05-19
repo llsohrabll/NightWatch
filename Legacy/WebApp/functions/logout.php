@@ -1,0 +1,44 @@
+<?php
+declare(strict_types=1);
+
+require_once(__DIR__ . '/common.php');
+
+set_security_headers();
+enforce_https();
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    send_json(['success' => false, 'error' => 'Invalid request method.'], 405);
+}
+enforce_same_origin_post();
+enforce_csrf_token();
+
+start_app_session();
+$userId = $_SESSION['user_id'] ?? null;
+$rawToken = current_raw_auth_token();
+
+if ($rawToken !== null) {
+    require_db_config_file();
+    $tokenHash = hash('sha256', $rawToken);
+    $conn = open_db_connection();
+
+    if (is_numeric($userId)) {
+        $stmt = $conn->prepare('UPDATE users SET token = NULL, token_expires_at = NULL WHERE id = ? AND token = ?');
+    } else {
+        $stmt = $conn->prepare('UPDATE users SET token = NULL, token_expires_at = NULL WHERE token = ?');
+    }
+
+    if ($stmt) {
+        if (is_numeric($userId)) {
+            $normalizedUserId = (int) $userId;
+            $stmt->bind_param('is', $normalizedUserId, $tokenHash);
+        } else {
+            $stmt->bind_param('s', $tokenHash);
+        }
+        $stmt->execute();
+        $stmt->close();
+    }
+    $conn->close();
+}
+
+destroy_app_session();
+send_json(['success' => true]);
